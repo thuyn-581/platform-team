@@ -6,9 +6,9 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    branch: gitopsdays
   timeout: 20s
-  url: "https://github.com/openshift-fluxv2-poc/dev-team"
+  url: "https://github.com/sabre1041-poc/dev-team"
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
