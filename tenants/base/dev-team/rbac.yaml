@@ -24,11 +24,11 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-admin
+  name: admin
 subjects:
 - apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: chanwit # change this to your Dev team member, or adding mmore team members here as an array 
+  kind: Group
+  name: dev-team
 - kind: ServiceAccount
   name: dev-team
   namespace: apps
