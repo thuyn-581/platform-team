@@ -7,3 +7,10 @@ resources:
   - ../base/dev-team
 patchesStrategicMerge:
   - dev-team-patch.yaml
+patchesJson6902:
+  - path: rbac-patch.yaml
+    target:
+      group: rbac.authorization.k8s.io
+      version: v1
+      kind: RoleBinding
+      name: dev-team-reconciler
