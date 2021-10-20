@@ -1,32 +1,55 @@
 # Flux multi-tenancy demo for OpenShift
 
-Here's a Flux multi-tenancy demo for OpenShift. This work has been derived from the original Flux multi-tenancy example, found [here](https://github.com/fluxcd/flux2-multi-tenancy).  A nice thing about the demo in this repo is that we will use only **Web UI of OpenShift** to install Flux and bootstrap the demo. Yes - as a Cluster-Admin user, you can up and running a GitOps system by just clicking. You click to install Flux via OperatorHub, then you click to import one of the following snippets into your cluster, and your multi-tenant GitOps system will be ready to use in minutes.
+A multi-tenancy demon of [Flux](https://www.weave.works/oss/flux/) for [OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift). This work has been derived from the original Flux multi-tenancy example, found [here](https://github.com/fluxcd/flux2-multi-tenancy). 
 
-Persona: **Alice** is an OpenShift Cluster-Admin. She'd like to set up multi-tenancy environments using Flux in an OpenShift-ish way via its Web UI by
+## Overview
 
-  1. Installing **Flux** via OperatorHub.
-  2. Bootstraping the multi-tenant setup with copy & paste the below snippets [here](https://github.com/openshift-fluxv2-poc/platform-team#production-cluster-source--kustomization) into OpenShift YAML import.
-     ![image](https://user-images.githubusercontent.com/10666/137634319-1aac84e8-a139-4e3b-857b-76eeabcb4770.png)
+One of the key features of OpenShift is that it emphasizes robust security practices and multi-tenancy. Flux will be used to employ GitOps strategies by enforcing cluster configurations as well as the deployment of resources in multiple namespaces (single cluster or multiple).
 
-And achieve a similar result as setting up with the CLI.
+### Personas
 
-As you might see that this multi-tenancy setup uses *Gatekeeper* for policy enforcement, we also demonstrate the seamless integration between Flux's GitOps and OpenShift's Operator Framework by managing the [Gatekeeper Operator's subscription and operator group](https://github.com/openshift-fluxv2-poc/platform-team/blob/main/infra/policy-engine-operator/gatekeeper-operator.yaml) with Flux.  You can see labels in the subscription object of Gatekeeper indicating that Flux manages it, for example.
-![image](https://user-images.githubusercontent.com/10666/137672236-d7b3acc1-2d6a-4249-9495-bdd7a684f279.png)
+There are multiple persons that are accompanied in this demonstration. Each persona is also assigned to an OpenShift Group with appropriate RBAC policies for the level of access needed. The following table provides an overview of the users and the associated properties
 
+| User | Group | Description |
+| ---- | ----- | ----------- |
+| alice | `platform-team` | Has `cluster-admin` level access and manages the OpenShift platform |
+| john | `dev-team` | Developer responsible for resources in the `apps` project (employed via GitOps) |
+| john | `dev-team-prod` | SRE responsible for resources in the `apps-prod` project (employed via GitOps) |
 
-Persona: **Chanwit** is a member of the Dev team. Please change user name, or add other users as team members [here](https://github.com/openshift-fluxv2-poc/platform-team/blob/main/tenants/base/dev-team/rbac.yaml#L31) before proceeding with your fork.
+## Deployment
 
-After Alice set up the platform, Chanwit would find the `apps` namespace and workloads running inside it after logging in. These workloads are deployed from his development repository, which is located here: https://github.com/openshift-fluxv2-poc/dev-team. Chanwit can now use this repo as the GitOps repository for his team to configure further and deploy apps.
+### Prerequisites
 
-![image](https://user-images.githubusercontent.com/10666/137634584-270c72f8-b62a-4d58-a3e7-b9af4621a163.png)
+Them following prerequisites must be satisfied before proceeding with the deployment and configuration of resources.
 
-## Production Cluster: Source & Kustomization
+1. OpenShift environment with `cluster-admin` level access
+2. Users and groups associated with the associated policies mapped according the the table defined above 
 
-You can copy the below YAML snippet and import it directly into OpenShift to kick off the setup without using CLI.
-If you fork, please change the repo URL at this [line](https://github.com/openshift-fluxv2-poc/platform-team/blob/main/README.md?plain=1#L39) and also this [line](https://github.com/openshift-fluxv2-poc/platform-team/blob/main/README.md?plain=1#L72) to match the forked one.
+### Flux Deployment
+
+Flux is available as an operator on OperatorHub and can be deployed through the **OpenShift Web Console**. Alternatively, the manifests can be applied using the `kubectl` or `oc` command line tools.
+
+The setup and configuration of Flux is managed by alice, as a platform manager.
+
+Using the web console, login to OpenShift and select **Operators** -> **OperatorHub** from the lefthand menu. 
+
+Search for **Flux** and click **Install**. Leave all options as provided and select **Install** to deploy the Operator. The Operator will then be installed into the `flux-system` project.
+
+![OperatorHub Install](images/operatorhub.png)
+
+Flux will then be installed into the `flux-system` namespace.
+
+### Infrastructure Deployment
+
+Once the Flux Operator has been deployed, the first steps is to set up the base infrastructure that is required by the Platform team. This includes:
+
+* Add the Git repository containing the source code
+* Deployment of the [Gatekeeper Operator](https://github.com/gatekeeper/gatekeeper-operator)
+* Gatekeeper Policies to enforce Flux policies are deployed to the appropriate namespace.
+
+Using the Web Console or the command line, apply the manifests located in [deployment/infrastructure.yaml](deployment/infrastructure.yaml). The contents of the file is shown below:
 
 ```yaml
----
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
@@ -36,11 +59,84 @@ spec:
   timeout: 20s
   gitImplementation: libgit2
   interval: 1m
-  # If you fork, please change this repo URL to match the forked one.
-  url: 'https://github.com/openshift-fluxv2-poc/platform-team' 
+  url: "https://github.com/sabre1041/platform-team"
   ref:
-    branch: main
+    branch: gitopsdays
 ---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-infrastructure
+spec:
+  timeout: 2m
+  path: ./clusters/infrastructure
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository
+```
+
+After a few moments, all of the policies will be installed to the cluster.
+
+If you have the [Flux CLI](https://fluxcd.io/docs/cmd/) installed, you can view the deployed resources:
+
+```shell
+flux get all -n flux-system
+```
+
+```shell
+NAME                            READY   MESSAGE                                                                 REVISION                                                SUSPENDED 
+gitrepository/platform-team     True    Fetched revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+
+NAME                                            READY   MESSAGE                                                                 REVISION                                                SUSPENDED 
+kustomization/multi-tenant-infrastructure       True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+kustomization/policies                          True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+kustomization/policy-engine                     True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+kustomization/policy-engine-operator            True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+kustomization/policy-template                   True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+```
+
+### Staging Application Deployment
+
+The platform team is responsible for managing the deployment of an application across multiple environments. These environments can be two namespaces on a single cluster or in separate clusters (we will assume a single cluster here).
+
+`john` is a member of the development tam who is looking to have an application deployed to a namespace called `apps` for which he will be able to manage.
+
+While logged in as `alice`, apply the staging configuration found in [deployment/staging.yaml](deployment/staging.yaml) and apply the manifest using the web console or CLI. The manifest is shown below:
+
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-staging
+spec:
+  timeout: 2m
+  path: ./clusters/staging
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository
+```
+
+After a few moments, a new namespace called `apps` will be created and an application will be deployed.
+
+Login as `john` to confirm that he has access to the `apps` project an view the application from _Topology view_ in the **Developer Perspective**
+
+![Topology View](images/apps-topology.png)
+
+An OpenShift _Route_ has been configured to expose the application. Click on the link to view the application.
+
+### Production Application Deployment
+
+The platform team is also responsible for deploying the application to the production environment. Login again as `alice` to apply the Flux policies to enable the deployment. The manifest is located in the [deployment/production.yaml](deployment/production.yaml) file as shown in the snippet below:
+
+```yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
@@ -57,35 +153,38 @@ spec:
     kind: GitRepository
 ```
 
-## Staging Cluster: Source & Kustomization
+Use the OpenShift web console or CLI to apply the manifest to the cluster.
+
+Login as `frank` who is an SRE and responsible for managing production applications. Flux will create a namespace called `apps-prod` containing the application. Confirm that `frank` can only see the `apps-prod` and not the `apps` project which demonstrates full multi tenancy!
+
+![Production Projects](images/apps-prod-projects.png)
+
+## Gatekeeper Policy Enforcement
+
+During the deployment of the infrastructure components, Gatekeeper was deployed to enforce additional policies within the cluster. A [ConstraintTemplate](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/) called `FluxMultiTenancy` was created to restrict where Flux resources can be deployed. The `ConstraintTemplate` can be found in [infra/policy-template/gatekeeper-mt-flux-template.yaml](infra/policy-template/gatekeeper-mt-flux-template.yaml). The policy will not allow Flux resources from specifying a `targetNamespace` which differs from the `namespace`. 
+
+A sample policy to test this policy can be found in the [testing/gatekeeper-enforcement.yaml](testing/gatekeeper-enforcement.yaml) file and can be found below:
+
 ```yaml
----
-apiVersion: source.toolkit.fluxcd.io/v1beta1
-kind: GitRepository
-metadata:
-  namespace: flux-system
-  name: platform-team
-spec:
-  timeout: 20s
-  gitImplementation: libgit2
-  interval: 1m
-  # If you fork, please change this repo URL to match the forked one.
-  url: 'https://github.com/openshift-fluxv2-poc/platform-team' 
-  ref:
-    branch: main
----
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  namespace: flux-system
-  name: multi-tenant-staging
+  name: dev-team-mynamespace
+  namespace: apps-prod
 spec:
-  timeout: 2m
-  path: ./clusters/staging
-  interval: 5m
+  interval: 1m
+  path: ./clusters/production
   prune: true
-  force: false
+  serviceAccountName: dev-team
   sourceRef:
-    name: platform-team
     kind: GitRepository
+    name: dev-team
+  targetNamespace: apps-mynamespace
+  validation: client
 ```
+
+While logged in as `alice`, using the OpenShift Web Console or CLI, attempt to create the resource in OpenShift. Attempting to create the resource will result in an error as it violates the policy.
+
+![Gatekeeper Enforcement](images/gatekeeper-enforcement.png)
+
+This confirms policies are being enforced via Gatekeeper Policies.

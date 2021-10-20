@@ -1,0 +1,14 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-production
+spec:
+  timeout: 2m
+  path: ./clusters/production
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository

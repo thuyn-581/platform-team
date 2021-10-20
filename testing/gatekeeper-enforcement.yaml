@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: dev-team-mynamespace
+  namespace: apps-prod
+spec:
+  interval: 1m
+  path: ./clusters/production
+  prune: true
+  serviceAccountName: dev-team
+  sourceRef:
+    kind: GitRepository
+    name: dev-team
+  targetNamespace: apps-mynamespace
+  validation: client

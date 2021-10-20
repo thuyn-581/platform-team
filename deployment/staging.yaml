@@ -1,0 +1,14 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-staging
+spec:
+  timeout: 2m
+  path: ./clusters/staging
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository

@@ -1,0 +1,27 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  namespace: flux-system
+  name: platform-team
+spec:
+  timeout: 20s
+  gitImplementation: libgit2
+  interval: 1m
+  url: "https://github.com/sabre1041/platform-team"
+  ref:
+    branch: gitopsdays
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-infrastructure
+spec:
+  timeout: 2m
+  path: ./clusters/infrastructure
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository
