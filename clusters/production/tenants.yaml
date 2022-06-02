@@ -4,8 +4,6 @@ metadata:
   name: tenants-prod
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: policies
   interval: 5m
   sourceRef:
     kind: GitRepository

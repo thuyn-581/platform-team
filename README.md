@@ -1,6 +1,6 @@
 # Flux multi-tenancy demo for OpenShift
 
-A multi-tenancy demon of [Flux](https://www.weave.works/oss/flux/) for [OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift). This work has been derived from the original Flux multi-tenancy example, found [here](https://github.com/fluxcd/flux2-multi-tenancy). 
+A multi-tenancy demon of [Flux](https://www.weave.works/oss/flux/) for [OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift). This work has been derived from the original Flux multi-tenancy example, found [here](https://github.com/fluxcd/flux2-multi-tenancy).
 
 ## Overview
 
@@ -14,7 +14,7 @@ There are multiple persons that are accompanied in this demonstration. Each pers
 | ---- | ----- | ----------- |
 | alice | `platform-team` | Has `cluster-admin` level access and manages the OpenShift platform |
 | john | `dev-team` | Developer responsible for resources in the `apps` project (employed via GitOps) |
-| john | `dev-team-prod` | SRE responsible for resources in the `apps-prod` project (employed via GitOps) |
+| frank | `dev-team-prod` | SRE responsible for resources in the `apps-prod` project (employed via GitOps) |
 
 ## Deployment
 
@@ -23,7 +23,7 @@ There are multiple persons that are accompanied in this demonstration. Each pers
 Them following prerequisites must be satisfied before proceeding with the deployment and configuration of resources.
 
 1. OpenShift environment with `cluster-admin` level access
-2. Users and groups associated with the associated policies mapped according the the table defined above 
+2. Users and groups associated with the associated policies mapped according the the table defined above
 
 ### Flux Deployment
 
@@ -31,7 +31,7 @@ Flux is available as an operator on OperatorHub and can be deployed through the 
 
 The setup and configuration of Flux is managed by alice, as a platform manager.
 
-Using the web console, login to OpenShift and select **Operators** -> **OperatorHub** from the lefthand menu. 
+Using the web console, login to OpenShift and select **Operators** -> **OperatorHub** from the lefthand menu.
 
 Search for **Flux** and click **Install**. Leave all options as provided and select **Install** to deploy the Operator. The Operator will then be installed into the `flux-system` project.
 
@@ -44,10 +44,18 @@ Flux will then be installed into the `flux-system` namespace.
 Once the Flux Operator has been deployed, the first steps is to set up the base infrastructure that is required by the Platform team. This includes:
 
 * Add the Git repository containing the source code
-* Deployment of the [Gatekeeper Operator](https://github.com/gatekeeper/gatekeeper-operator)
-* Gatekeeper Policies to enforce Flux policies are deployed to the appropriate namespace.
+* Deployment of a policy engine of choice. Options available are [Gatekeeper Operator](https://github.com/gatekeeper/gatekeeper-operator) or [Kyverno](https://kyverno.io/)
+* Policies to enforce Flux policies are deployed to the appropriate namespace.
 
-Using the Web Console or the command line, apply the manifests located in [deployment/infrastructure.yaml](deployment/infrastructure.yaml). The contents of the file is shown below:
+The process to deploy involves applying three (3) flux resources:
+
+1. `GitRepository` representing the Git source resources will be obtained from
+2. `Kustomization` associated with configuring the integration between OpenShift Monitoring and Flux
+3. `Kustomization` representing the Policy Engine.
+
+Using the Web Console or the command line, using the following steps to apply the following configurations which are located in the `cluster/infrastructure` directory.
+
+First, add the `GitRepository` associated with the source code:
 
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1beta1
@@ -62,15 +70,19 @@ spec:
   url: "https://github.com/sabre1041/platform-team"
   ref:
     branch: gitopsdays
----
+```
+
+Next, deploy the `Kustomization` to deploy the integration between Flux and OpenShift Monitoring:
+
+```yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: multi-tenant-infrastructure
+  name: platform-flux-monitoring
 spec:
   timeout: 2m
-  path: ./clusters/infrastructure
+  path: ./clusters/infrastructure/flux
   interval: 5m
   prune: true
   force: false
@@ -79,24 +91,64 @@ spec:
     kind: GitRepository
 ```
 
-After a few moments, all of the policies will be installed to the cluster.
+Finally, deploy **one** of the following policy engines:
 
-If you have the [Flux CLI](https://fluxcd.io/docs/cmd/) installed, you can view the deployed resources:
+**Kyverno**
+
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-infrastructure-kyverno
+spec:
+  timeout: 2m
+  path: ./clusters/infrastructure/kyverno
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository
+```
+
+**Gatekeeper**
+
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  namespace: flux-system
+  name: multi-tenant-infrastructure-gatekeeper
+spec:
+  timeout: 2m
+  path: ./clusters/infrastructure/gatekeeper
+  interval: 5m
+  prune: true
+  force: false
+  sourceRef:
+    name: platform-team
+    kind: GitRepository
+```
+
+After a few moments, all of the resources will be installed to the cluster.
+
+If you have the [Flux CLI](https://fluxcd.io/docs/cmd/) installed, you can view the deployed resources. Depending on the policy engine that was chosen, your output may look slightly different:
 
 ```shell
 flux get all -n flux-system
 ```
 
 ```shell
-NAME                            READY   MESSAGE                                                                 REVISION                                                SUSPENDED 
-gitrepository/platform-team     True    Fetched revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+NAME                            READY   MESSAGE                                                                                 REVISION                                                        SUSPENDED 
+gitrepository/platform-team     True    stored artifact for revision 'gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253' gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
 
-NAME                                            READY   MESSAGE                                                                 REVISION                                                SUSPENDED 
-kustomization/multi-tenant-infrastructure       True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
-kustomization/policies                          True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
-kustomization/policy-engine                     True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
-kustomization/policy-engine-operator            True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
-kustomization/policy-template                   True    Applied revision: gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0   gitopsdays/b9b4a8a52fed9f51eefdcc732b010c034262a1b0     False    
+NAME                                                    READY   MESSAGE                                                                         REVISION                                                        SUSPENDED 
+kustomization/flux-monitoring                           True    Applied revision: gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253      gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
+kustomization/multi-tenant-infrastructure-kyverno       True    Applied revision: gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253      gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
+kustomization/platform-flux-monitoring                  True    Applied revision: gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253      gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
+kustomization/policies-kyverno                          True    Applied revision: gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253      gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
+kustomization/policy-engine-kyverno                     True    Applied revision: gitopsdays-/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253      gitopsdays/5eb4f6dbcc59a28777fdabcafe2ca609c4d28253        False    
 ```
 
 ### Staging Application Deployment
@@ -159,11 +211,11 @@ Login as `frank` who is an SRE and responsible for managing production applicati
 
 ![Production Projects](images/apps-prod-projects.png)
 
-## Gatekeeper Policy Enforcement
+## Policy Enforcement
 
-During the deployment of the infrastructure components, Gatekeeper was deployed to enforce additional policies within the cluster. A [ConstraintTemplate](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/) called `FluxMultiTenancy` was created to restrict where Flux resources can be deployed. The `ConstraintTemplate` can be found in [infra/policy-template/gatekeeper-mt-flux-template.yaml](infra/policy-template/gatekeeper-mt-flux-template.yaml). The policy will not allow Flux resources from specifying a `targetNamespace` which differs from the `namespace`. 
+Whether Kyverno or Gatekeeper was chosen as the policy engine implementation, either will act as an enforcement point for ensuring the appropriate security within the environment. In order to maintain appropriate multitenancy, these engines will prevent Flux resources from specifying a `targetNamespace` which differs from the `namespace`.
 
-A sample policy to test this policy can be found in the [testing/gatekeeper-enforcement.yaml](testing/gatekeeper-enforcement.yaml) file and can be found below:
+A sample policy to test this policy can be found in the [testing/policy-enforcement.yaml](testing/policy-enforcement.yaml) file and can be found below:
 
 ```yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
@@ -185,6 +237,10 @@ spec:
 
 While logged in as `alice`, using the OpenShift Web Console or CLI, attempt to create the resource in OpenShift. Attempting to create the resource will result in an error as it violates the policy.
 
-![Gatekeeper Enforcement](images/gatekeeper-enforcement.png)
+![Policy Enforcement](images/policy-enforcement.png)
 
-This confirms policies are being enforced via Gatekeeper Policies.
+This confirms policies are being enforced appropriately .
+
+## Monitoring
+
+OpenShift includes a set of monitoring components consisting of Prometheus, Thanos and Grafana. As part of the deployment performed earlier, configurations were performed to enable OpenShift monitoring (specifically Prometheus) to scape metrics endpoints that are exposed by each of the Flux components. These metrics can be viewed by either navigating to the included Prometheus instance that is available or by accessing the **Metrics** page within the OpenShift Web Console by navigating to **Observe** -> **Metrics**.

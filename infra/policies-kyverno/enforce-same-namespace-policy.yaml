@@ -1,0 +1,29 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-same-namespace-policy
+  annotations:
+    policies.kyverno.io/title: Enforce Target Namespace Matches Namespace
+    policies.kyverno.io/category: Other
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: enforce
+  background: false
+  rules:
+    - name: namespace-name
+      match:
+        any:
+          - resources:
+              kinds:
+                - helm.toolkit.fluxcd.io/v2beta1/HelmRelease
+                - kustomize.toolkit.fluxcd.io/v1beta2/Kustomization
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - flux-system
+      validate:
+        message: targetNamespace does not match namespace '{{request.object.metadata.namespace}}'
+        pattern:
+          spec:
+            targetNamespace: "{{request.object.metadata.namespace}}"

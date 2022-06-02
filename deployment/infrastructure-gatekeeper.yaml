@@ -2,7 +2,7 @@ apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
   namespace: flux-system
-  name: platform-team
+  name: platform-team-gatekeeper
 spec:
   timeout: 20s
   gitImplementation: libgit2
@@ -15,10 +15,10 @@ apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
   namespace: flux-system
-  name: multi-tenant-infrastructure
+  name: multi-tenant-infrastructure-gatekeeper
 spec:
   timeout: 2m
-  path: ./clusters/infrastructure
+  path: ./clusters/infrastructure/gatekeeper
   interval: 5m
   prune: true
   force: false

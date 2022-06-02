@@ -1,13 +1,14 @@
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: tenants
+  name: flux-monitoring
   namespace: flux-system
 spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
     name: platform-team
-  path: ./tenants/staging
+  path: ./infra/flux-monitoring
   prune: true
   validation: client

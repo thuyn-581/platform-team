@@ -2,75 +2,75 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: policy-engine-operator
+  name: policy-engine-operator-gatekeeper
   namespace: flux-system
 spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
     name: platform-team
-  path: ./infra/policy-engine-operator
+  path: ./infra/policy-engine-operator-gatekeeper
   prune: true
   validation: client
   healthChecks:
-  - apiVersion: apps/v1
-    kind: Deployment
-    name: gatekeeper-operator-controller
-    namespace: openshift-operators
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: gatekeeper-operator-controller
+      namespace: openshift-operators
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: policy-engine
+  name: policy-engine-gatekeeper
   namespace: flux-system
 spec:
   dependsOn:
-  - name: policy-engine-operator
+    - name: policy-engine-operator-gatekeeper
   interval: 5m
   sourceRef:
     kind: GitRepository
     name: platform-team
-  path: ./infra/policy-engine
+  path: ./infra/policy-engine-gatekeeper
   prune: true
   validation: client
   healthChecks:
-  - apiVersion: apps/v1
-    kind: Deployment
-    name: gatekeeper-audit
-    namespace: openshift-gatekeeper-system
-  - apiVersion: apps/v1
-    kind: Deployment
-    name: gatekeeper-controller-manager
-    namespace: openshift-gatekeeper-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: gatekeeper-audit
+      namespace: openshift-gatekeeper-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: gatekeeper-controller-manager
+      namespace: openshift-gatekeeper-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: policy-template
+  name: policy-template-gatekeeper
   namespace: flux-system
 spec:
   dependsOn:
-  - name: policy-engine
+    - name: policy-engine-gatekeeper
   interval: 5m
   sourceRef:
     kind: GitRepository
     name: platform-team
-  path: ./infra/policy-template
+  path: ./infra/policy-template-gatekeeper
   prune: true
   validation: client
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: policies
+  name: policies-gatekeeper
   namespace: flux-system
 spec:
   dependsOn:
-  - name: policy-template
+    - name: policy-template-gatekeeper
   interval: 5m
   sourceRef:
     kind: GitRepository
     name: platform-team
-  path: ./infra/policies
+  path: ./infra/policies-gatekeeper
   prune: true
   validation: client
