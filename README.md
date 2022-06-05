@@ -244,3 +244,39 @@ This confirms policies are being enforced appropriately .
 ## Monitoring
 
 OpenShift includes a set of monitoring components consisting of Prometheus, Thanos and Grafana. As part of the deployment performed earlier, configurations were performed to enable OpenShift monitoring (specifically Prometheus) to scape metrics endpoints that are exposed by each of the Flux components. These metrics can be viewed by either navigating to the included Prometheus instance that is available or by accessing the **Metrics** page within the OpenShift Web Console by navigating to **Observe** -> **Metrics**.
+
+The following queries can be used to visualize the operational statistics of the Flux environment.
+
+### Reconciler Statistics
+
+```
+gotk_reconcile_condition{kind=~"Kustomization|HelmRelease",status="False",type="Ready"}
+```
+
+### Reconciler Operations Average Duration
+
+```
+  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
+/
+  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
+```
+
+### Source Operations Average Duration
+
+```
+  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
+/
+  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
+```
+
+### CPU Statistics
+
+```
+rate(process_cpu_seconds_total{namespace="flux-system",pod=~".*-controller-.*"}[1m])
+```
+
+### API Requests
+
+```
+sum(rate(rest_client_requests_total{namespace="flux-system",pod=~".*-controller-.*"}[1m]))
+```
