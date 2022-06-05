@@ -256,17 +256,17 @@ gotk_reconcile_condition{kind=~"Kustomization|HelmRelease",status="False",type="
 ### Reconciler Operations Average Duration
 
 ```
-  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
+  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"flux-system",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
 /
-  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
+  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"flux-system",kind=~"Kustomization|HelmRelease"}[5m])) by (kind)
 ```
 
 ### Source Operations Average Duration
 
 ```
-  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
+  sum(rate(gotk_reconcile_duration_seconds_sum{namespace=~"flux-system",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
 /
-  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"$operator_namespace",exported_namespace=~"$namespace",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
+  sum(rate(gotk_reconcile_duration_seconds_count{namespace=~"flux-system",kind=~"GitRepository|HelmRepository|Bucket"}[5m])) by (kind)
 ```
 
 ### CPU Statistics
