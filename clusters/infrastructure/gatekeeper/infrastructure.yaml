@@ -8,7 +8,7 @@ spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
-    name: platform-team
+    name: platform-team-gatekeeper
   path: ./infra/policy-engine-operator-gatekeeper
   prune: true
   validation: client
@@ -29,7 +29,7 @@ spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
-    name: platform-team
+    name: platform-team-gatekeeper
   path: ./infra/policy-engine-gatekeeper
   prune: true
   validation: client
@@ -54,7 +54,7 @@ spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
-    name: platform-team
+    name: platform-team-gatekeeper
   path: ./infra/policy-template-gatekeeper
   prune: true
   validation: client
@@ -70,7 +70,7 @@ spec:
   interval: 5m
   sourceRef:
     kind: GitRepository
-    name: platform-team
+    name: platform-team-gatekeeper
   path: ./infra/policies-gatekeeper
   prune: true
   validation: client

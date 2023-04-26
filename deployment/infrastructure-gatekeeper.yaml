@@ -23,5 +23,5 @@ spec:
   prune: true
   force: false
   sourceRef:
-    name: platform-team
+    name: platform-team-gatekeeper
     kind: GitRepository
