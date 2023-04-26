@@ -7,7 +7,7 @@ spec:
   timeout: 20s
   gitImplementation: libgit2
   interval: 1m
-  url: "https://github.com/sabre1041/platform-team"
+  url: "https://github.com/thuyn-581/platform-team"
   ref:
     branch: gitopsdays
 ---
